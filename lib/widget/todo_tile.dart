@@ -47,6 +47,7 @@ class ToDoTile extends StatelessWidget {
               ),
                Text(myText,
               style: const TextStyle(
+                color: Colors.black,
                 fontWeight: FontWeight.w500,
                 fontSize: 15
               ),)

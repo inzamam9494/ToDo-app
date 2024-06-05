@@ -1,47 +1,70 @@
+import 'package:date_format/date_format.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_slidable/flutter_slidable.dart';
-import 'package:to_do_app/widget/bottom_sheet.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:intl/intl.dart';
+import 'package:to_do_app/data/database.dart';
 import 'package:to_do_app/widget/color_choosing.dart';
 import 'package:to_do_app/widget/todo_tile.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  final VoidCallback toggleTheme;
+  const HomePage({super.key,required this.toggleTheme});
 
   @override
   State<HomePage> createState() => _HomePageState();
 }
 
+DateTime now = DateTime.now();
+
 class _HomePageState extends State<HomePage> {
-  final List todoList = [
-    ["Read Daily UI Article", Colors.amber],
-    ["Course work", Colors.blue.shade200],
-    ["Workout", Colors.pink.shade200],
-    ["Grocery Shopping", Colors.greenAccent.shade200],
-    ["Course Work", Colors.red.shade200],
-  ];
 
+  // reference the hive box
+  final _myBox = Hive.box('mybox');
 
+  bool isDarkMode = false;
 
+  // void toggleTheme() {
+  //   setState(() {
+  //     isDarkMode = !isDarkMode;
+  //   });
+  // }
+
+  ToDoDataBase db = ToDoDataBase();
+  
   TextEditingController textEditingController = TextEditingController();
   Color selectedColor = Colors.amber;
 
   void saveNewTask(){
     setState(() {
-      todoList.add([textEditingController.text, selectedColor]);
+      db.todoList.add([textEditingController.text, selectedColor]);
     });
     textEditingController.clear();
+    db.updateDataBase();
   }
 
   void updateSelectColor(Color color){
     setState(() {
       selectedColor = color;
     });
+    db.updateDataBase();
   }
 
   void deleteToDoList(int index){
     setState(() {
-      todoList.removeAt(index);
+      db.todoList.removeAt(index);
     });
+    db.updateDataBase();
+  }
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    if(_myBox.get("TODOLIST") == null){
+      db.createInitialData();
+    }else{
+      db.loadData();
+    };
+    super.initState();
   }
 
   @override
@@ -92,16 +115,17 @@ class _HomePageState extends State<HomePage> {
         ),
         appBar: AppBar(
           title: Container(
-            child: const Column(
+            child:  Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "23 MAY 2023",
-                  style: TextStyle(fontWeight: FontWeight.w700),
+                  "${now.day} ${DateFormat.LLLL().format(now)} ${now.year}",
+                  // now.copyWith(day: now.day + now.month + now.year, ).toString(),
+                  style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
                 Text(
-                  "TUESDAY",
-                  style: TextStyle(fontSize: 15, color: Colors.grey),
+                  DateFormat.EEEE().format(now),
+                  style: const TextStyle(fontSize: 15, color: Colors.grey),
                 )
               ],
             ),
@@ -114,7 +138,7 @@ class _HomePageState extends State<HomePage> {
                 elevation: 3,
                 borderRadius: BorderRadius.circular(30),
                 child: IconButton(
-                  onPressed: () {},
+                  onPressed: widget.toggleTheme,
                   icon: Transform.flip(
                       flipX: true, child: const Icon(Icons.dark_mode_outlined)),
                 ),
@@ -127,10 +151,10 @@ class _HomePageState extends State<HomePage> {
           margin: const EdgeInsets.only(left: 10, right: 10, bottom: 10),
           height: double.maxFinite,
           child: ListView.builder(
-              itemCount: todoList.length,
+              itemCount: db.todoList.length,
               itemBuilder: (context, index) {
-                String todoText = todoList[index][0];
-                Color todoColor = todoList[index][1];
+                String todoText = db.todoList[index][0];
+                Color todoColor = db.todoList[index][1];
                 return Container(
                     child: ToDoTile(
                       myText: todoText,
